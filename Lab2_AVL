@@ -1,0 +1,482 @@
+#include <time.h>
+#include <iostream>
+#include <iomanip>
+
+using namespace std;
+
+// definicja typu danych reprezentuj¹cego wêze³ drzewa AVL
+//--------------------------------------------------------
+
+struct AVLNode
+{
+  AVLNode * p, * left, * right;
+  int key, bf;
+};
+
+// Definicja klasy obs³uguj¹cej drzewo AVL
+//----------------------------------------
+
+class AVL
+{
+  public:
+
+    AVLNode * root;  // korzeñ drzewa
+    int count;       // liczba wêz³ów
+    AVL();
+    AVLNode * rotationRR(AVLNode * A);
+    AVLNode * rotationLL(AVLNode * A);
+    AVLNode * rotationRL(AVLNode * A);
+    AVLNode * rotationLR(AVLNode * A);
+    bool      insert(AVLNode * n);
+    AVLNode * search(int key);
+    AVLNode * maxNode(AVLNode * x);
+    AVLNode * minNode(AVLNode * x);
+    AVLNode * pred(AVLNode * x);
+    AVLNode * succ(AVLNode * x);
+    AVLNode * search2(AVLNode *root, int key);
+    void      walk(AVLNode * x);
+    void      coutAVLcount();
+};
+
+
+// Konstruktor klasy AVL
+//----------------------
+
+AVL::AVL()
+{
+  root = NULL;
+  count = 0;
+}
+
+
+// Rotacja RR
+//-----------
+
+AVLNode * AVL::rotationRR(AVLNode * A)
+{
+  AVLNode * B = A->right, * P = A->p;
+
+  A->right = B->left;
+  if(A->right) A->right->p = A;
+  B->left = A;
+  B->p = P;
+  A->p = B;
+  if(P)
+  {
+    if(P->left == A) P->left = B; else P->right = B;
+  }
+  else root = B;
+
+  if(B->bf == -1)
+  {
+    A->bf = B->bf = 0;
+  }
+  else
+  {
+    A->bf = -1; B->bf = 1;
+  }
+  return B;
+}
+
+// Rotacja LL
+//-----------
+
+AVLNode * AVL::rotationLL(AVLNode * A)
+{
+  AVLNode * B = A->left, * P = A->p;
+
+  A->left = B->right;
+  if(A->left) A->left->p = A;
+  B->right = A;
+  B->p = P;
+  A->p = B;
+  if(P)
+  {
+    if(P->left == A) P->left = B; else P->right = B;
+  }
+  else root = B;
+
+  if(B->bf == 1)
+  {
+    A->bf = B->bf = 0;
+  }
+  else
+  {
+    A->bf = 1; B->bf = -1;
+  }
+
+  return B;
+}
+
+// Rotacja RL
+//-----------
+
+AVLNode * AVL::rotationRL(AVLNode * A)
+{
+  AVLNode * B = A->right, * C = B->left, * P = A->p;
+
+  B->left = C->right;
+  if(B->left) B->left->p = B;
+  A->right = C->left;
+  if(A->right) A->right->p = A;
+  C->left = A;
+  C->right = B;
+  A->p = B->p = C;
+  C->p = P;
+  if(P)
+  {
+    if(P->left == A) P->left = C; else P->right = C;
+  }
+  else root = C;
+
+  A->bf = (C->bf == -1) ?  1 : 0;
+  B->bf = (C->bf ==  1) ? -1 : 0;
+  C->bf = 0;
+
+  return C;
+}
+
+// Rotacja LR
+//-----------
+
+AVLNode * AVL::rotationLR(AVLNode * A)
+{
+  AVLNode * B = A->left, * C = B->right, * P = A->p;
+
+  B->right = C->left;
+  if(B->right) B->right->p = B;
+  A->left = C->right;
+  if(A->left) A->left->p = A;
+  C->right = A;
+  C->left = B;
+  A->p = B->p = C;
+  C->p = P;
+  if(P)
+  {
+    if(P->left == A) P->left = C; else P->right = C;
+  }
+  else root = C;
+
+  A->bf = (C->bf ==  1) ? -1 : 0;
+  B->bf = (C->bf == -1) ?  1 : 0;
+  C->bf = 0;
+
+  return C;
+}
+
+// Wstawia element do struktury AVL
+//---------------------------------
+
+bool AVL::insert(AVLNode * n)
+{
+  AVLNode * x = root, * y, * z;
+
+  y = n->left = n->right = NULL;
+  n->bf = 0;
+
+  while(x)
+  {
+    if(x->key == n->key)
+    {
+      delete n;
+      return false;
+    }
+    y = x;
+    x = (n->key < x->key) ? x->left : x->right;
+  }
+
+  count++;
+
+  if(!(n->p = y))
+  {
+    root = n;
+    return true;
+  }
+  if(n->key < y->key) y->left = n; else y->right = n;
+  if(y->bf)
+  {
+    y->bf = 0;
+    return true;
+  }
+  y->bf = (y->left == n) ? 1 : -1;
+  z = y->p;
+  while(z)
+  {
+    if(z->bf) break;
+    z->bf = (z->left == y) ? 1 : -1;
+    y = z; z = z->p;
+  }
+
+  if(!z) return true;
+
+  if(z->bf == 1)
+  {
+    if(z->right == y)
+    {
+      z->bf = 0;
+      return true;
+    }
+    if(y->bf == -1) rotationLR(z); else rotationLL(z);
+    return true;
+  }
+  else
+  {
+    if(z->left == y)
+    {
+      z->bf = 0;
+      return true;
+    }
+    if(y->bf == 1) rotationRL(z); else rotationRR(z);
+    return true;
+  }
+}
+  ///////////////////////////////////////////////////////////////////////////////Algorytm iteracyjny
+//  / Wyszukuje element wg wartoœci klucza
+//-------------------------------------
+
+AVLNode * AVL::search(int key)
+{
+
+  AVLNode * x = root;
+
+  while((x) && (x->key != key))
+    x = (key < x->key) ? x->left : x->right;
+
+  return x;
+
+}
+///////////////// rekurencyjny algorytm  do wyszukiwania///////////////////////////////////
+AVLNode*AVL::search2(AVLNode*root, int key){
+
+    if( root==NULL)
+        return NULL;
+
+    if(key=root->key)
+       return root;
+
+    if(key<root->key)
+        root->left=search2(root->left,key);
+    else
+        root->right=search2(root->right,key);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Przechodzi przez drzewo wypisuj¹c zawartoœæ wêz³ów
+//---------------------------------------------------
+
+void AVL::walk(AVLNode * x)
+{
+  cout << x->key << " : bf = " << setw(2) << x->bf << " : Left-> ";
+  if(x->left) cout << setw(3) << x->left->key;
+  else        cout << "NIL";
+  cout << ", Right-> ";
+  if(x->right) cout << setw(3) << x->right->key;
+  else         cout << "NIL";
+  cout << " : p -> ";
+  if(x->p) cout << setw(3) << x->p->key;
+  else     cout << "NIL";
+  cout << endl;
+  if(x->left)  walk(x->left);
+  if(x->right) walk(x->right);
+}
+// Sprawdza, czy drzewo zawiera wêze³ o zadanym kluczu
+//----------------------------------------------------
+
+void check(AVL * T)
+{
+    time_t start, koniec;
+    double roznica;
+    time( & start );
+  cout << "Sprawdzenie obecnosci wezla o danym kluczu w drzewie AVL\n"
+          "--------------------------------------------------------\n\n"
+          "Podaj klucz wezla : ";
+
+  int key;
+
+  cin >> key;
+
+  cout << endl;
+if(T->search2(T->root,key)) cout << "Wezel znaleziony.\n";
+//  if(T->search(key)) cout << "Wezel znaleziony.\n";
+  else               cout << "W drzewie AVL brak wezla o podanym kluczu\n";
+  time( & koniec );
+  roznica = difftime( koniec, start );
+  cout << "\nGratulacja, poprawny wynik!\nObliczenia zajely Ci: " << roznica << " sekund";
+}
+
+// Dodaje nowe węzły do drzewa AVL
+void add(AVL * T)
+{
+  cout << "Dodawanie nowych wezlow do drzewa AVL\n"
+          "-------------------------------------\n\n";
+  T->coutAVLcount();
+  cout << "Podaj liczbe wezlow do utworzenia, a nastepnie wprowadz odpowiednia\n"
+          "liczbe kluczy nowych wezlow.\n\n";
+
+  int i,n;
+
+  AVLNode * x;
+
+  cin >> n;
+  for(i = 0; i < n; i++)
+  {
+    x = new AVLNode;
+    cin >> x->key;
+    T->insert(x);
+  }
+
+  cout << endl;
+  T->walk(T->root);
+  T->coutAVLcount();
+}
+// Wypisuje do cout liczbê wêz³ów drzewa AVL
+//------------------------------------------
+
+void AVL::coutAVLcount()
+{
+  cout << "\nLiczba wezlow drzewa AVL : " << count << endl << endl;
+}
+
+
+// Zwraca wêze³ z maksymalnym kluczem
+//-----------------------------------
+
+AVLNode * AVL::minNode(AVLNode * x)
+{
+  while(x->left) x = x->left;
+  return x;
+}
+
+// Zwraca wêze³ z minimalnym kluczem
+//----------------------------------
+
+AVLNode * AVL::maxNode(AVLNode * x)
+{
+  while(x->right) x = x->right;
+  return x;
+}
+
+
+
+// Zwraca wêze³ poprzednika
+//-------------------------
+
+AVLNode * AVL::pred(AVLNode * x)
+{
+  if(x->left) return maxNode(x->left);
+
+  AVLNode * y;
+
+  do
+  {
+    y = x;
+    x = x->p;
+  } while(x && (x->right != y));
+
+  return x;
+}
+AVLNode * AVL::succ(AVLNode * x)
+{
+  if(x->right) return minNode(x->right);
+
+  AVLNode * y;
+
+  do
+  {
+    y = x;
+    x = x->p;
+  } while(x && (x->left != y));
+
+  return x;
+}
+void pred(AVL * T)
+{
+  cout << "Znajdowanie poprzednika w drzewie AVL\n"
+          "-------------------------------------\n\n"
+          "Podaj klucz wezla : ";
+  int key;
+  AVLNode * x;
+
+  cin >> key;
+  cout << endl;
+
+  x = T->search(key);
+
+  if(x)
+  {
+    x = T->pred(x);
+    if(x) cout << "Poprzednikiem [" << key << "] jest " << x->key << endl;
+    else  cout << "Wezel [" << key << "] nie posiada poprzednika\n";
+  }
+  else cout << "Wezel o podanym kluczu nie istnieje w drzewie AVL\n";
+}
+
+// Znajduje nastêpnik wêz³a o zadanym kluczu
+//------------------------------------------
+
+void succ(AVL * T)
+{
+  cout << "Znajdowanie nastepnika w drzewie AVL\n"
+          "------------------------------------\n\n"
+          "Podaj klucz wezla : ";
+  int key;
+  AVLNode * x;
+
+  cin >> key;
+  cout << endl;
+
+  x = T->search(key);
+
+  if(x)
+  {
+    x = T->succ(x);
+    if(x) cout << "Nastepnikiem [" << key << "] jest " << x->key << endl;
+    else  cout << "Wezel [" << key << "] nie posiada nastepnika\n";
+  }
+  else cout << "Wezel o podanym kluczu nie istnieje w drzewie AVL\n";
+}
+
+main()
+{
+  AVL * T = new AVL();
+  int choice;
+
+  do
+  {
+
+
+    cout << "Test funkcji obslugi drzew AVL\n"
+            "==============================\n\n"
+            "Wybor Funkcja\n"
+            "-------------\n"
+            " [0]  Koniec\n"
+            " [1]  Stworz drzewo\n"
+            " [2]  Sprawdz obecnosc wezla\n"
+            " [3]  Sprawdz jego poprzednik\n"
+            " [4]  Sprawdz jego nastepnik\n"
+            "--------------\n"
+            "Twoj wybor : ";
+
+    cin >> choice;
+
+
+
+    switch(choice)
+    {
+      case 1 : add(T);       break;
+      case 2 : check(T);     break;
+      case 3 : pred(T);      break;
+      case 4 : succ(T);      break;
+
+    }
+
+    if((choice >= 1) && (choice <= 9))
+    {
+      cout << endl;
+
+    }
+
+  } while(choice);
+
+  delete T;
+}
